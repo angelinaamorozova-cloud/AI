@@ -2,15 +2,12 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#00F5FF">
+<meta name="format-detection" content="telephone=no">
 <title>AI vs Живой английский</title>
-
-<!-- Иконка (только локальная) -->
-<link rel="icon" type="image/jpeg" href="icon.jpg">
-<link rel="apple-touch-icon" href="icon.jpg">
 
 <style>
 :root {
@@ -23,18 +20,28 @@
   --color-text-light: #A7A9BE;
   --color-correct: #00F5A0;
   --color-incorrect: #FF6B6B;
-  --font-main: 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+  --font-main: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   --radius-md: 16px;
   --radius-lg: 24px;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
 }
 
-* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+* { 
+  box-sizing: border-box; 
+  margin: 0; 
+  padding: 0; 
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
 
-html, body {
-  width: 100%;
+html {
   height: 100%;
   overflow: hidden;
-  touch-action: manipulation;
+  position: fixed;
+  width: 100%;
 }
 
 body {
@@ -44,9 +51,17 @@ body {
   align-items: center;
   justify-content: center;
   padding: 10px;
+  padding-top: calc(10px + var(--safe-top));
+  padding-bottom: calc(10px + var(--safe-bottom));
   line-height: 1.4;
   background: linear-gradient(135deg, #0a1628 0%, #050d1a 100%);
-  position: relative;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  touch-action: manipulation;
 }
 
 #animated-bg {
@@ -62,8 +77,10 @@ body {
 .quiz-container {
   width: 100%;
   max-width: 560px;
-  height: 100vh;
-  max-height: 100vh;
+  height: calc(100vh - 20px);
+  height: calc(100dvh - 20px);
+  max-height: calc(100vh - 20px);
+  max-height: calc(100dvh - 20px);
   background: var(--color-bg-soft);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
@@ -97,6 +114,7 @@ body {
 
 .welcome-header {
   padding: 16px 16px 10px;
+  padding-top: calc(16px + var(--safe-top));
   text-align: center;
   flex-shrink: 0;
   background: var(--color-bg-soft);
@@ -190,8 +208,11 @@ body {
 
 #quiz-screen {
   padding: 16px;
+  padding-top: calc(16px + var(--safe-top));
+  padding-bottom: calc(16px + var(--safe-bottom));
   position: relative;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 #quiz-bg-canvas {
@@ -354,6 +375,7 @@ body {
   margin-top: 14px;
   width: 100%;
   padding: 14px;
+  padding-bottom: calc(14px + var(--safe-bottom));
   font-size: clamp(14px, 3vw, 16px);
   font-weight: 700;
   color: var(--color-bg);
@@ -371,6 +393,8 @@ body {
 
 #result-screen {
   padding: 16px;
+  padding-top: calc(16px + var(--safe-top));
+  padding-bottom: calc(16px + var(--safe-bottom));
   overflow: hidden;
 }
 
@@ -380,6 +404,7 @@ body {
   flex-direction: column;
   min-height: 0;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .result-score {
@@ -463,6 +488,7 @@ body {
 .btn-restart {
   width: 100%;
   padding: 14px;
+  padding-bottom: calc(14px + var(--safe-bottom));
   font-size: clamp(13px, 3vw, 16px);
   font-weight: 800;
   color: var(--color-turquoise);
@@ -587,7 +613,17 @@ body {
 </audio>
 
 <script>
-// ============ АНИМИРОВАННЫЙ ФОН (оптимизирован) ============
+// ============ ФУНКЦИЯ ПЕРЕМЕШИВАНИЯ ============
+function shuffleArray(array) {
+  const shuffled = [...array];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+}
+
+// ============ АНИМИРОВАННЫЙ ФОН ============
 const bgCanvas = document.getElementById('animated-bg');
 const bgCtx = bgCanvas.getContext('2d');
 
@@ -599,21 +635,21 @@ resizeBgCanvas();
 window.addEventListener('resize', resizeBgCanvas);
 
 const bgParticles = [];
-const PARTICLE_COUNT = 40; // Уменьшено для производительности
+const PARTICLE_COUNT = 25;
 for (let i = 0; i < PARTICLE_COUNT; i++) {
   bgParticles.push({
     x: Math.random() * window.innerWidth,
     y: Math.random() * window.innerHeight,
-    vx: (Math.random() - 0.5) * 0.8,
-    vy: (Math.random() - 0.5) * 0.8,
-    r: Math.random() * 2.5 + 1,
-    alpha: Math.random() * 0.4 + 0.3
+    vx: (Math.random() - 0.5) * 0.5,
+    vy: (Math.random() - 0.5) * 0.5,
+    r: Math.random() * 2 + 1,
+    alpha: Math.random() * 0.3 + 0.2
   });
 }
 
 let lastBgTime = 0;
 function animateBg(timestamp) {
-  if (timestamp - lastBgTime < 33) { // ~30 FPS вместо 60
+  if (timestamp - lastBgTime < 60) {
     requestAnimationFrame(animateBg);
     return;
   }
@@ -627,25 +663,8 @@ function animateBg(timestamp) {
     bgCtx.beginPath();
     bgCtx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
     bgCtx.fillStyle = `rgba(0, 245, 255, ${p.alpha})`;
-    bgCtx.shadowBlur = 10;
-    bgCtx.shadowColor = 'rgba(0, 245, 255, 0.6)';
     bgCtx.fill();
-    for (let j = i + 1; j < bgParticles.length; j++) {
-      const p2 = bgParticles[j];
-      const dx = p.x - p2.x, dy = p.y - p2.y;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      if (dist < 100) {
-        bgCtx.beginPath();
-        bgCtx.moveTo(p.x, p.y);
-        bgCtx.lineTo(p2.x, p2.y);
-        bgCtx.strokeStyle = `rgba(0, 245, 255, ${0.25 * (1 - dist / 100)})`;
-        bgCtx.lineWidth = 0.8;
-        bgCtx.shadowBlur = 0;
-        bgCtx.stroke();
-      }
-    }
   });
-  bgCtx.shadowBlur = 0;
   requestAnimationFrame(animateBg);
 }
 requestAnimationFrame(animateBg);
@@ -663,20 +682,20 @@ function resizeQuizCanvas() {
 }
 
 const quizParticles = [];
-for (let i = 0; i < 25; i++) {
+for (let i = 0; i < 15; i++) {
   quizParticles.push({
     x: Math.random() * 560,
     y: Math.random() * 800,
-    vx: (Math.random() - 0.5) * 0.6,
-    vy: (Math.random() - 0.5) * 0.6,
-    r: Math.random() * 2 + 1,
-    alpha: Math.random() * 0.5 + 0.3
+    vx: (Math.random() - 0.5) * 0.4,
+    vy: (Math.random() - 0.5) * 0.4,
+    r: Math.random() * 1.5 + 1,
+    alpha: Math.random() * 0.3 + 0.2
   });
 }
 
 let lastQuizTime = 0;
 function animateQuizBg(timestamp) {
-  if (timestamp - lastQuizTime < 40) { // ~25 FPS
+  if (timestamp - lastQuizTime < 60) {
     requestAnimationFrame(animateQuizBg);
     return;
   }
@@ -692,31 +711,14 @@ function animateQuizBg(timestamp) {
       quizCtx.beginPath();
       quizCtx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
       quizCtx.fillStyle = `rgba(108, 92, 231, ${p.alpha})`;
-      quizCtx.shadowBlur = 8;
-      quizCtx.shadowColor = 'rgba(108, 92, 231, 0.6)';
       quizCtx.fill();
-      for (let j = i + 1; j < quizParticles.length; j++) {
-        const p2 = quizParticles[j];
-        const dx = p.x - p2.x, dy = p.y - p2.y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        if (dist < 70) {
-          quizCtx.beginPath();
-          quizCtx.moveTo(p.x, p.y);
-          quizCtx.lineTo(p2.x, p2.y);
-          quizCtx.strokeStyle = `rgba(108, 92, 231, ${0.3 * (1 - dist / 70)})`;
-          quizCtx.lineWidth = 0.6;
-          quizCtx.shadowBlur = 0;
-          quizCtx.stroke();
-        }
-      }
     });
-    quizCtx.shadowBlur = 0;
   }
   requestAnimationFrame(animateQuizBg);
 }
 requestAnimationFrame(animateQuizBg);
 
-// ============ ОЗВУЧКА ТОЛЬКО АНГЛИЙСКИХ ИДИОМ ============
+// ============ ОЗВУЧКА АНГЛИЙСКИХ ИДИОМ ============
 function speakEnglishText(text) {
   if (!('speechSynthesis' in window)) return;
   window.speechSynthesis.cancel();
@@ -727,41 +729,65 @@ function speakEnglishText(text) {
   window.speechSynthesis.speak(utterance);
 }
 
-// ============ ЗВУКИ ОТВЕТОВ ============
+// ============ ЗВУКИ ОТВЕТОВ (ОПТИМИЗИРОВАНО ДЛЯ iOS/ANDROID) ============
 let audioCtx = null;
+let correctBuffer = null;
+let incorrectBuffer = null;
+
 function initAudio() {
   if (!audioCtx) {
-    try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {}
+    try {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      // Предзагрузка звуков
+      createSoundBuffers();
+    } catch (e) {}
+  }
+  // Разблокировка для iOS
+  if (audioCtx && audioCtx.state === 'suspended') {
+    audioCtx.resume();
+  }
+}
+
+function createSoundBuffers() {
+  if (!audioCtx) return;
+  
+  // Создаем буфер для правильного звука (короткий)
+  const sampleRate = audioCtx.sampleRate;
+  const correctLength = 0.3 * sampleRate;
+  correctBuffer = audioCtx.createBuffer(1, correctLength, sampleRate);
+  const correctData = correctBuffer.getChannelData(0);
+  for (let i = 0; i < correctLength; i++) {
+    const t = i / sampleRate;
+    correctData[i] = Math.sin(2 * Math.PI * 523.25 * t) * Math.exp(-t * 10) * 0.3;
+  }
+  
+  // Создаем буфер для неправильного звука
+  const incorrectLength = 0.4 * sampleRate;
+  incorrectBuffer = audioCtx.createBuffer(1, incorrectLength, sampleRate);
+  const incorrectData = incorrectBuffer.getChannelData(0);
+  for (let i = 0; i < incorrectLength; i++) {
+    const t = i / sampleRate;
+    incorrectData[i] = Math.sin(2 * Math.PI * (440 - t * 200) * t) * Math.exp(-t * 8) * 0.3;
   }
 }
 
 function playCorrectSound() {
-  if (!audioCtx) return;
-  const now = audioCtx.currentTime;
-  const osc1 = audioCtx.createOscillator(), gain1 = audioCtx.createGain();
-  osc1.type = 'sine'; osc1.frequency.value = 523.25;
-  gain1.gain.setValueAtTime(0, now); gain1.gain.linearRampToValueAtTime(0.25, now + 0.02);
-  gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
-  osc1.connect(gain1).connect(audioCtx.destination); osc1.start(now); osc1.stop(now + 0.3);
-  const osc2 = audioCtx.createOscillator(), gain2 = audioCtx.createGain();
-  osc2.type = 'sine'; osc2.frequency.value = 783.99;
-  gain2.gain.setValueAtTime(0, now + 0.1); gain2.gain.linearRampToValueAtTime(0.25, now + 0.12);
-  gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
-  osc2.connect(gain2).connect(audioCtx.destination); osc2.start(now + 0.1); osc2.stop(now + 0.5);
+  if (!audioCtx || !correctBuffer) return;
+  const source = audioCtx.createBufferSource();
+  source.buffer = correctBuffer;
+  source.connect(audioCtx.destination);
+  source.start(0);
 }
 
 function playIncorrectSound() {
-  if (!audioCtx) return;
-  const now = audioCtx.currentTime;
-  const osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
-  osc.type = 'triangle'; osc.frequency.setValueAtTime(440, now);
-  osc.frequency.exponentialRampToValueAtTime(220, now + 0.4);
-  gain.gain.setValueAtTime(0, now); gain.gain.linearRampToValueAtTime(0.2, now + 0.02);
-  gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
-  osc.connect(gain).connect(audioCtx.destination); osc.start(now); osc.stop(now + 0.5);
+  if (!audioCtx || !incorrectBuffer) return;
+  const source = audioCtx.createBufferSource();
+  source.buffer = incorrectBuffer;
+  source.connect(audioCtx.destination);
+  source.start(0);
 }
 
-// ============ АУДИО ПРИВЕТСТВИЯ (ОДИН РАЗ) ============
+// ============ АУДИО ПРИВЕТСТВИЯ ============
 let introVoicePlayed = false;
 
 function playIntroVoice() {
@@ -835,14 +861,19 @@ function renderQuestion() {
   scoreLabel.textContent = `${score} / 10`;
   questionPhrase.textContent = `"${q.phrase}"`;
   setTimeout(() => speakEnglishText(q.phrase), 200);
+  
+  // Перемешиваем варианты ответов
+  const shuffledOptions = shuffleArray(q.options.map((opt, idx) => ({ text: opt, isCorrect: idx === q.correct })));
+  
   answersEl.innerHTML = '';
-  q.options.forEach((option, index) => {
+  shuffledOptions.forEach((item) => {
     const card = document.createElement('button');
     card.className = 'answer-card';
-    card.textContent = option;
-    card.addEventListener('click', () => handleAnswer(index, card));
+    card.textContent = item.text;
+    card.addEventListener('click', () => handleAnswer(item.isCorrect, card));
     answersEl.appendChild(card);
   });
+  
   explanationEl.classList.remove('show');
   explanationEl.innerHTML = '';
   btnNext.classList.remove('show');
@@ -852,23 +883,31 @@ questionPhrase.addEventListener('click', () => {
   speakEnglishText(questions[currentQuestion].phrase);
 });
 
-function handleAnswer(index, card) {
+function handleAnswer(isCorrect, card) {
   if (answered) return;
   answered = true;
   initAudio();
-  const q = questions[currentQuestion];
+  
   const allCards = answersEl.querySelectorAll('.answer-card');
   allCards.forEach(c => c.classList.add('disabled'));
-  allCards[q.correct].classList.add('correct');
-  if (index !== q.correct) {
-    card.classList.add('incorrect');
-    playIncorrectSound();
-  } else {
+  
+  if (isCorrect) {
+    card.classList.add('correct');
     score++;
     scoreLabel.textContent = `${score} / 10`;
-    playCorrectSound();
+    setTimeout(() => playCorrectSound(), 50);
+  } else {
+    card.classList.add('incorrect');
+    // Показываем правильный ответ
+    allCards.forEach(c => {
+      if (c.textContent === questions[currentQuestion].options[questions[currentQuestion].correct]) {
+        c.classList.add('correct');
+      }
+    });
+    setTimeout(() => playIncorrectSound(), 50);
   }
-  explanationEl.innerHTML = q.explanation;
+  
+  explanationEl.innerHTML = questions[currentQuestion].explanation;
   explanationEl.classList.add('show');
   btnNext.classList.add('show');
 }
@@ -916,27 +955,33 @@ function restartQuiz() {
   showScreen('quiz');
 }
 
-// ============ ЗАПУСК ============
+// ============ ЗАПУСК ВИДЕО И АУДИО ============
 
 introVideo.addEventListener('canplaythrough', () => {
   setTimeout(() => btnStart.classList.add('visible'), 1000);
 });
 setTimeout(() => btnStart.classList.add('visible'), 3000);
 
-// Только один триггер аудио
 introVideo.addEventListener('ended', () => {
   playIntroVoice();
 });
 
+// Агрессивное включение звука для всех устройств
 function enableSound() {
   if (introVideo && introVideo.muted) {
     introVideo.muted = false;
     introVideo.volume = 1.0;
+    introVideo.play().catch(() => {});
   }
+  // Инициализация аудио контекста
+  initAudio();
 }
 
+// Множественные обработчики для разных устройств
 document.addEventListener('click', enableSound, { once: true });
 document.addEventListener('touchstart', enableSound, { once: true });
+document.addEventListener('touchend', enableSound, { once: true });
+document.addEventListener('mousedown', enableSound, { once: true });
 
 btnStart.addEventListener('click', () => {
   initAudio();
@@ -949,15 +994,29 @@ btnStart.addEventListener('click', () => {
 
 btnNext.addEventListener('click', () => goToNext());
 btnRestart.addEventListener('click', () => restartQuiz());
-document.addEventListener('click', initAudio, { once: true });
 
+// Запуск видео при загрузке
 window.addEventListener('load', () => {
   setTimeout(() => {
     if (introVideo) {
-      introVideo.play().catch(() => {});
+      introVideo.play().catch(() => {
+        // Если автозапуск заблокирован, пробуем при первом касании
+        document.addEventListener('touchstart', () => {
+          introVideo.play().catch(() => {});
+        }, { once: true });
+      });
     }
   }, 100);
 });
+
+// Дополнительная инициализация аудио при первом взаимодействии
+document.addEventListener('touchstart', () => {
+  initAudio();
+}, { once: true });
+
+document.addEventListener('click', () => {
+  initAudio();
+}, { once: true });
 </script>
 
 </body>
