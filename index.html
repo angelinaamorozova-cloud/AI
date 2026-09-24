@@ -77,14 +77,17 @@ body {
   flex-direction: column;
 }
 
+/* ✅ ВСЕ экраны скрыты по умолчанию */
 .screen {
-  display: none;
+  display: none !important;
   width: 100%;
   height: 100%;
   animation: fadeIn 0.5s ease;
 }
+
+/* ✅ Только активный экран виден */
 .screen.active {
-  display: flex;
+  display: flex !important;
   flex-direction: column;
 }
 
@@ -370,11 +373,10 @@ body {
 .btn-next.show { display: block; }
 .btn-next:active { transform: scale(0.98); }
 
+/* ✅ Результат — без display:flex по умолчанию */
 #result-screen {
   padding: 0;
   overflow: hidden;
-  display: flex;
-  flex-direction: column;
 }
 
 .result-content {
@@ -417,11 +419,11 @@ body {
   flex-shrink: 0;
 }
 
-/* ✅ Видео на весь экран без рамок и полос */
+/* ✅ Видео робота — большое, на весь экран без рамок */
 .outro-video-wrap {
   width: 100%;
   flex: 1;
-  min-height: 0;
+  min-height: 200px;
   overflow: hidden;
   display: flex;
   align-items: center;
@@ -434,7 +436,7 @@ body {
 .outro-video-wrap video {
   width: 100%;
   height: 100%;
-  object-fit: fill;
+  object-fit: contain;
   display: block;
 }
 
@@ -498,11 +500,13 @@ body {
   .result-content { padding: 12px; }
   .cta-block { margin: 8px 12px; }
   .btn-restart { width: calc(100% - 24px); margin: 0 12px 12px; }
+  .outro-video-wrap { min-height: 150px; }
 }
 
 @media (min-width: 768px) {
   body { padding: 20px; }
   .quiz-container { max-width: 600px; height: 90vh; max-height: 800px; }
+  .outro-video-wrap { min-height: 300px; }
 }
 </style>
 </head>
@@ -738,37 +742,27 @@ function playIncorrectSound() {
   osc.connect(gain).connect(audioCtx.destination); osc.start(now); osc.stop(now + 0.5);
 }
 
-// ============ АУДИО ПРИВЕТСТВИЯ (НАДЁЖНАЯ ЗАЩИТА ОТ ДВОЙНОГО ЗАПУСКА) ============
+// ============ АУДИО ПРИВЕТСТВИЯ ============
 let introVoicePlayed = false;
 let introVoiceTimer = null;
 
 function playIntroVoice() {
-  // Двойная защита от повторного запуска
-  if (introVoicePlayed) {
-    console.log('Аудио уже запущено, пропускаем');
-    return;
-  }
-  
-  // Очищаем предыдущий таймер если есть
+  if (introVoicePlayed) return;
   if (introVoiceTimer) {
     clearTimeout(introVoiceTimer);
     introVoiceTimer = null;
   }
-  
   introVoicePlayed = true;
   
   const audio = document.getElementById('intro-voice');
   if (audio) {
-    // Полная остановка перед запуском
     audio.pause();
     audio.currentTime = 0;
-    
-    // Запуск с небольшой задержкой для стабильности
     introVoiceTimer = setTimeout(() => {
       audio.play().then(() => {
-        console.log('✅ Аудио запущено один раз');
+        console.log('Аудио запущено');
       }).catch(e => {
-        console.log('❌ Ошибка запуска аудио:', e);
+        console.log('Ошибка аудио:', e);
         introVoicePlayed = false;
       });
     }, 200);
@@ -824,9 +818,18 @@ const scoreLabel = document.getElementById('score-label');
 const introVideo = document.getElementById('intro-video');
 const outroVideo = document.getElementById('outro-video');
 
+// ✅ Надёжное переключение экранов
 function showScreen(name) {
-  Object.values(screens).forEach(s => s.classList.remove('active'));
-  screens[name].classList.add('active');
+  // Сначала скрываем ВСЕ экраны
+  document.querySelectorAll('.screen').forEach(s => {
+    s.classList.remove('active');
+  });
+  // Потом показываем нужный
+  const target = screens[name];
+  if (target) {
+    target.classList.add('active');
+  }
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 function renderQuestion() {
@@ -895,17 +898,20 @@ function showResult() {
   document.getElementById('result-title').textContent = title;
   document.getElementById('result-text').textContent = text;
   if (introVideo) { try { introVideo.pause(); } catch(e){} }
+  
+  // ✅ Сначала переключаем экран, потом запускаем видео
   showScreen('result');
   
-  // ✅ Запуск финального видео СРАЗУ без задержки
-  if (outroVideo) {
-    outroVideo.muted = false;
-    outroVideo.volume = 1.0;
-    outroVideo.play().catch(() => {
-      outroVideo.muted = true;
-      outroVideo.play().catch(() => {});
-    });
-  }
+  setTimeout(() => {
+    if (outroVideo) {
+      outroVideo.muted = false;
+      outroVideo.volume = 1.0;
+      outroVideo.play().catch(() => {
+        outroVideo.muted = true;
+        outroVideo.play().catch(() => {});
+      });
+    }
+  }, 100);
 }
 
 function restartQuiz() {
@@ -918,7 +924,7 @@ function restartQuiz() {
   showScreen('quiz');
 }
 
-// ============ ЗАПУСК ВИДЕО И АУДИО ============
+// ============ ЗАПУСК ============
 
 introVideo.addEventListener('canplaythrough', () => {
   setTimeout(() => btnStart.classList.add('visible'), 1500);
@@ -937,9 +943,8 @@ document.addEventListener('click', enableSound, { once: true });
 document.addEventListener('touchstart', enableSound, { once: true });
 document.addEventListener('keydown', enableSound, { once: true });
 
-// ✅ ТОЛЬКО ОДИН обработчик ended - без timeupdate
 introVideo.addEventListener('ended', () => {
-  console.log('Видео закончилось, запускаю аудио...');
+  console.log('Видео закончилось');
   playIntroVoice();
 });
 
