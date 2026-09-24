@@ -371,8 +371,10 @@ body {
 .btn-next:active { transform: scale(0.98); }
 
 #result-screen {
-  padding: 16px;
+  padding: 0;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .result-content {
@@ -382,6 +384,7 @@ body {
   min-height: 0;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+  padding: 16px;
 }
 
 .result-score {
@@ -414,24 +417,24 @@ body {
   flex-shrink: 0;
 }
 
-/* ✅ Видео на весь экран без чёрных полос */
+/* ✅ Видео на весь экран без рамок и полос */
 .outro-video-wrap {
   width: 100%;
   flex: 1;
   min-height: 0;
-  border-radius: var(--radius-md);
   overflow: hidden;
-  margin-bottom: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
-  background: #000;
+  flex-shrink: 1;
+  background: transparent;
+  margin: 0;
+  padding: 0;
 }
 .outro-video-wrap video {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: fill;
   display: block;
 }
 
@@ -441,7 +444,7 @@ body {
   border-radius: var(--radius-md);
   padding: 10px 12px;
   text-align: center;
-  margin-bottom: 10px;
+  margin: 10px 16px;
   flex-shrink: 0;
 }
 .cta-block p {
@@ -461,7 +464,8 @@ body {
 .cta-block a:active { opacity: 0.7; }
 
 .btn-restart {
-  width: 100%;
+  width: calc(100% - 32px);
+  margin: 0 16px 16px;
   padding: 14px;
   font-size: clamp(13px, 3vw, 16px);
   font-weight: 800;
@@ -488,24 +492,12 @@ body {
 @media (max-width: 380px) {
   body { padding: 8px; }
   .welcome-header { padding: 12px 12px 8px; }
-  #quiz-screen, #result-screen { padding: 12px; }
+  #quiz-screen { padding: 12px; }
   .answers { gap: 8px; }
   .answer-card { padding: 10px 12px; }
-}
-
-@media (min-height: 800px) {
-  .outro-video-wrap { max-height: 40vh; }
-}
-
-@media (max-height: 600px) {
-  .welcome-header { padding: 10px 12px 6px; }
-  .welcome-title { font-size: 18px; margin-bottom: 4px; }
-  .welcome-text { font-size: 11px; }
-  .outro-video-wrap { max-height: 30vh; }
-  .result-score { font-size: 28px; }
-  .result-title { font-size: 16px; }
-  .result-text { font-size: 12px; margin-bottom: 6px; }
-  .cta-block { padding: 8px 10px; }
+  .result-content { padding: 12px; }
+  .cta-block { margin: 8px 12px; }
+  .btn-restart { width: calc(100% - 24px); margin: 0 12px 12px; }
 }
 
 @media (min-width: 768px) {
@@ -570,11 +562,11 @@ body {
           <source src="robot-outro.mp4" type="video/mp4">
         </video>
       </div>
+    </div>
 
-      <div class="cta-block">
-        <p>Хочешь каждый день разбирать, где нейросети ошибаются, а где гениальны?</p>
-        <a href="https://t.me/pro_TechnicalEnglish" target="_blank" rel="noopener">Подпишись на @pro_TechnicalEnglish</a>
-      </div>
+    <div class="cta-block">
+      <p>Хочешь каждый день разбирать, где нейросети ошибаются, а где гениальны?</p>
+      <a href="https://t.me/pro_TechnicalEnglish" target="_blank" rel="noopener">Подпишись на @pro_TechnicalEnglish</a>
     </div>
 
     <button class="btn-restart" id="btn-restart">Пройти ещё раз</button>
@@ -746,23 +738,40 @@ function playIncorrectSound() {
   osc.connect(gain).connect(audioCtx.destination); osc.start(now); osc.stop(now + 0.5);
 }
 
-// ============ АУДИО ПРИВЕТСТВИЯ (ТОЛЬКО ОДИН РАЗ) ============
+// ============ АУДИО ПРИВЕТСТВИЯ (НАДЁЖНАЯ ЗАЩИТА ОТ ДВОЙНОГО ЗАПУСКА) ============
 let introVoicePlayed = false;
+let introVoiceTimer = null;
 
 function playIntroVoice() {
-  if (introVoicePlayed) return;
+  // Двойная защита от повторного запуска
+  if (introVoicePlayed) {
+    console.log('Аудио уже запущено, пропускаем');
+    return;
+  }
+  
+  // Очищаем предыдущий таймер если есть
+  if (introVoiceTimer) {
+    clearTimeout(introVoiceTimer);
+    introVoiceTimer = null;
+  }
+  
   introVoicePlayed = true;
   
   const audio = document.getElementById('intro-voice');
   if (audio) {
+    // Полная остановка перед запуском
     audio.pause();
     audio.currentTime = 0;
-    setTimeout(() => {
-      audio.play().catch(e => {
-        console.log('Audio play failed:', e);
+    
+    // Запуск с небольшой задержкой для стабильности
+    introVoiceTimer = setTimeout(() => {
+      audio.play().then(() => {
+        console.log('✅ Аудио запущено один раз');
+      }).catch(e => {
+        console.log('❌ Ошибка запуска аудио:', e);
         introVoicePlayed = false;
       });
-    }, 100);
+    }, 200);
   }
 }
 
@@ -772,6 +781,11 @@ function stopIntroVoice() {
     audio.pause();
     audio.currentTime = 0;
   }
+  if (introVoiceTimer) {
+    clearTimeout(introVoiceTimer);
+    introVoiceTimer = null;
+  }
+  introVoicePlayed = false;
 }
 
 // ============ ДАННЫЕ ВОПРОСОВ ============
@@ -882,16 +896,16 @@ function showResult() {
   document.getElementById('result-text').textContent = text;
   if (introVideo) { try { introVideo.pause(); } catch(e){} }
   showScreen('result');
-  setTimeout(() => {
-    if (outroVideo) {
-      outroVideo.muted = false;
-      outroVideo.volume = 1.0;
-      outroVideo.play().catch(() => {
-        outroVideo.muted = true;
-        outroVideo.play().catch(() => {});
-      });
-    }
-  }, 500);
+  
+  // ✅ Запуск финального видео СРАЗУ без задержки
+  if (outroVideo) {
+    outroVideo.muted = false;
+    outroVideo.volume = 1.0;
+    outroVideo.play().catch(() => {
+      outroVideo.muted = true;
+      outroVideo.play().catch(() => {});
+    });
+  }
 }
 
 function restartQuiz() {
@@ -911,7 +925,6 @@ introVideo.addEventListener('canplaythrough', () => {
 });
 setTimeout(() => btnStart.classList.add('visible'), 4000);
 
-// ✅ Включение звука при первом взаимодействии
 function enableSound() {
   if (introVideo && introVideo.muted) {
     introVideo.muted = false;
@@ -924,9 +937,9 @@ document.addEventListener('click', enableSound, { once: true });
 document.addEventListener('touchstart', enableSound, { once: true });
 document.addEventListener('keydown', enableSound, { once: true });
 
-// ✅ Аудио только после окончания видео (ОДИН раз)
+// ✅ ТОЛЬКО ОДИН обработчик ended - без timeupdate
 introVideo.addEventListener('ended', () => {
-  console.log('Video ended, playing audio...');
+  console.log('Видео закончилось, запускаю аудио...');
   playIntroVoice();
 });
 
